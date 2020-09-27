@@ -99,6 +99,7 @@ extension BaseTableModule {
     }
 }
 
+// MARK: FilterInfo
 
 public class FilterInfo: CustomStringConvertible {
     public var key: Int32 = 0
@@ -113,24 +114,64 @@ public class FilterInfo: CustomStringConvertible {
     public func describe(with cols: [String], values: [Any] = []) -> String {
         var str = "Filter[\(key)] (" // + String(columnsUsed, radix: 2) + " "
         for arg in argv {
-            Report.print(arg.describe(with: cols, values: values),
+            Swift.print(arg.describe(with: cols, values: values),
                         separator: ",", terminator: " ", to: &str)
         }
-        Report.print(")", separator: "", terminator: "", to: &str)
+        Swift.print(")", separator: "", terminator: "", to: &str)
         return str
     }
     
     public var description: String {
         var str = "Filter[\(key)] (" // + String(columnsUsed, radix: 2) + " "
         for arg in argv {
-            Report.print(arg.description,
+            Swift.print(arg.description,
                         separator: ",", terminator: " ", to: &str)
         }
-        Report.print(")", separator: "", terminator: "\n", to: &str)
+        Swift.print(")", separator: "", terminator: "", to: &str)
         return str
     }
 }
 
+public extension FilterInfo {
+    
+    convenience init? (_ indexInfo: inout sqlite3_index_info) {
+        
+        self.init()
+        
+        // Inputs
+        let constraintCount = Int(indexInfo.nConstraint)
+        let constraints = UnsafeBufferPointer<sqlite3_index_constraint>(start: indexInfo.aConstraint, count: constraintCount)
+        
+        var argc: Int32 = 1
+        
+        for i in 0 ..< constraintCount {
+            let constraint = constraints[i]
+            guard constraint.usable != 0 else { continue }
+            let farg = FilterArg(arg: argc - 1, col: constraint.iColumn, op: constraint.op)
+            argv.append(farg)
+            // Outputs
+            indexInfo.aConstraintUsage[i].argvIndex = argc
+            // NOTE: Consider omit = 1 if column is HIDDEN
+            // indexInfo.aConstraintUsage[i].omit = 1
+            argc += 1
+        }
+        
+        let orderByCount = Int(indexInfo.nOrderBy)
+        let orderBy = UnsafeBufferPointer<sqlite3_index_orderby>(start: indexInfo.aOrderBy, count: orderByCount)
+        
+        if orderByCount == 1 {
+            if orderBy[0].desc == 1 {
+                isDescending = true
+            }
+            // Output
+            indexInfo.orderByConsumed = 1
+        }
+        self.columnsUsed = indexInfo.colUsed
+    }
+    
+}
+
+// MARK: FilterArg
 public struct FilterArg: CustomStringConvertible, Equatable {
     
     public let arg_ndx: Int32
@@ -180,44 +221,5 @@ public struct FilterArg: CustomStringConvertible, Equatable {
                 return "<op>"
         }
     }
-}
-
-public extension FilterInfo {
-    
-    convenience init? (_ indexInfo: inout sqlite3_index_info) {
-        
-        self.init()
-        
-        // Inputs
-        let constraintCount = Int(indexInfo.nConstraint)
-        let constraints = UnsafeBufferPointer<sqlite3_index_constraint>(start: indexInfo.aConstraint, count: constraintCount)
-                
-        var argc: Int32 = 1
-        
-        for i in 0 ..< constraintCount {
-            let constraint = constraints[i]
-            guard constraint.usable != 0 else { continue }
-            let farg = FilterArg(arg: argc - 1, col: constraint.iColumn, op: constraint.op)
-            argv.append(farg)
-            // Outputs
-            indexInfo.aConstraintUsage[i].argvIndex = argc
-            // NOTE: Consider omit = 1 if column is HIDDEN
-            // indexInfo.aConstraintUsage[i].omit = 1
-            argc += 1
-        }
-        
-        let orderByCount = Int(indexInfo.nOrderBy)
-        let orderBy = UnsafeBufferPointer<sqlite3_index_orderby>(start: indexInfo.aOrderBy, count: orderByCount)
-        
-        if orderByCount == 1 {
-            if orderBy[0].desc == 1 {
-                isDescending = true
-            }
-            // Output
-            indexInfo.orderByConsumed = 1
-        }
-        self.columnsUsed = indexInfo.colUsed
-    }
-
 }
 

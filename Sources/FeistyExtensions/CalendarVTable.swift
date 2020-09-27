@@ -95,7 +95,7 @@ final public class CalendarModule: BaseTableModule {
         }
 
         indexInfo.idxNum = add(info)
-        Report.print(info.describe(with: Self.Column.allCases.map { $0.name }))
+        Report.print("bestIndex:", info.describe(with: Self.Column.allCases.map { $0.name }))
         return .ok
     }
 
@@ -167,7 +167,7 @@ extension CalendarModule {
             _rowid = 1
             
             // DEBUG
-            Report.print(#function, indexNumber, filterInfo.describe(with: Column.allCases.map {String(describing:$0)}, values: arguments))
+            Report.print(#function, indexNumber, "\n", filterInfo.describe(with: Column.allCases.map {String(describing:$0)}, values: arguments))
             
             func date(y: Int64, m: Int, d: Int) -> Date {
                 var dateComponents = DateComponents()
