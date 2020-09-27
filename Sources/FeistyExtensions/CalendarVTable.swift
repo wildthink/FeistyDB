@@ -10,11 +10,21 @@ import CSQLite
 import FeistyDB
 
 final public class CalendarModule: BaseTableModule {
-    
+        
     public enum Column: Int32, ColumnIndex {
         case date, weekday, day, week, month, year,
              julianDay, julianDate,
              start, stop, step
+        
+        var filterOption: FilterInfo.Option {
+            switch self {
+                case .date, .year: return .ok
+                case .start, .stop: return .ok
+                case .step: return .eq_only
+                default:
+                    return .exclude
+            }
+        }
     }
     public override var declaration: String {
         "CREATE TABLE x(date, weekday, day, week, month, year, julianDay, julianDate, start HIDDEN, stop HIDDEN, step HIDDEN)"
@@ -56,29 +66,13 @@ final public class CalendarModule: BaseTableModule {
     
     public override func bestIndex(_ indexInfo: inout sqlite3_index_info) -> VirtualTableModuleBestIndexResult {
         
-        guard let info = FilterInfo(&indexInfo) else { return .constraint }
-        
-//        var argc: Int32 = 1
-        
-        // jmj
-        // Inputs
-//        let constraintCount = Int(indexInfo.nConstraint)
-//        let constraints = UnsafeBufferPointer<sqlite3_index_constraint>(start: indexInfo.aConstraint, count: constraintCount)
-//
-//        for i in 0 ..< constraintCount {
-//            let constraint = constraints[i]
-//            let farg = info.argv[i]
-//            // Outputs
-//            Report.print (farg, constraint, indexInfo.aConstraintUsage[i])
-//            guard constraint.usable != 0 else { continue }
-//            guard farg.col_ndx != Column.weekday.rawValue else { continue }
-//
-//            indexInfo.aConstraintUsage[i].argvIndex = argc
-//            // NOTE: Consider omit = 1 if column is HIDDEN
-//            // indexInfo.aConstraintUsage[i].omit = 1
-//            argc += 1
-//        }
-        // jmj end
+        guard let info = FilterInfo(&indexInfo, check: { (farg) in
+            // Maybe another option being .error or .reject?
+            // when we encounter an unknow columen which should NEVER happen!!
+            guard let col = Column(rawValue: farg.col_ndx) else { return .exclude }
+            return col.filterOption
+        })
+        else { return .constraint }
         
         if info.contains(Column.start) && info.contains(Column.stop) {
             indexInfo.estimatedCost = 2  - (info.contains(Column.step) ? 1 : 0)

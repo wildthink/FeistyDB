@@ -134,20 +134,38 @@ public class FilterInfo: CustomStringConvertible {
 
 public extension FilterInfo {
     
-    convenience init? (_ indexInfo: inout sqlite3_index_info) {
+    enum Option { case ok, eq_only, required, exclude }
+    typealias ConstraintCheck = (FilterArg) -> Option
+    
+    convenience init? (_ indexInfo: inout sqlite3_index_info, check: ConstraintCheck? = nil) {
         
         self.init()
-        
+
         // Inputs
         let constraintCount = Int(indexInfo.nConstraint)
-        let constraints = UnsafeBufferPointer<sqlite3_index_constraint>(start: indexInfo.aConstraint, count: constraintCount)
+        let constraints = UnsafeBufferPointer<sqlite3_index_constraint>(
+            start: indexInfo.aConstraint, count: constraintCount)
         
+        let check = check ?? { (_) in .ok }
         var argc: Int32 = 1
         
         for i in 0 ..< constraintCount {
             let constraint = constraints[i]
-            guard constraint.usable != 0 else { continue }
+            
             let farg = FilterArg(arg: argc - 1, col: constraint.iColumn, op: constraint.op)
+
+            switch check(farg) {
+                case .required:
+                    if (1 != constraint.usable) { return nil }
+                case .exclude:
+                    continue
+                case .ok:
+                    break
+                case .eq_only:
+                    if (1 != constraint.usable) && constraint.op != SQLITE_INDEX_CONSTRAINT_EQ {
+                        return nil
+                    }
+            }
             argv.append(farg)
             // Outputs
             indexInfo.aConstraintUsage[i].argvIndex = argc
