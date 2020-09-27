@@ -94,7 +94,7 @@ final public class CalendarModule: BaseTableModule {
     }
 
     public override func openCursor() -> VirtualTableCursor {
-        return Cursor(self, filter: filters.first)
+        return Cursor(self)
     }
 }
 
@@ -115,14 +115,14 @@ extension CalendarModule {
         var step: Calendar.Frequency = .daily
         var date_fmt: DateFormatter { module.date_fmt }
         
-        public override init(_ vtab: CalendarModule, filter: FilterInfo?)
+        public override init(_ vtab: CalendarModule)
         {
             self.calendar = vtab.calendar
             self._min = vtab._min
             self._max = vtab._max
             self.step = vtab.step
             self.current = _min
-            super.init(vtab, filter: filter)
+            super.init(vtab)
         }
 
         override func column(_ index: Int32) -> DatabaseValue {
@@ -156,8 +156,9 @@ extension CalendarModule {
                 
         override func filter(_ arguments: [DatabaseValue], indexNumber: Int32, indexName: String?) {
             defer { module.clearFilters() }
-            guard let filterInfo = filterInfo ?? module.filters[Int(indexNumber)]
-            else { return }
+            let filterInfo = module.filters[Int(indexNumber)]
+//            guard let filterInfo = filterInfo ?? module.filters[Int(indexNumber)]
+//            else { return }
             _rowid = 1
             
             // DEBUG

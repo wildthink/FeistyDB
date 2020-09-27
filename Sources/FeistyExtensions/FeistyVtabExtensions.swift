@@ -63,7 +63,7 @@ open class BaseTableModule: VirtualTableModule {
     }
     
     open func openCursor() -> VirtualTableCursor {
-        return Cursor(self, filter: filters.first)
+        return Cursor(self)
     }
 }
 
@@ -71,15 +71,21 @@ extension BaseTableModule {
     open class Cursor<M: BaseTableModule>: VirtualTableCursor {
         
         public let module: M
-        public let filterInfo: FilterInfo?
+//        public let filterInfo: FilterInfo?
         public var _rowid: Int64 = 0
         open var eof: Bool { true }
 
-        public var isDescending: Bool { filterInfo?.isDescending ?? false }
+        public var isDescending: Bool = false
+
+//        public var isDescending: Bool { filterInfo?.isDescending ?? false }
         
-        public init(_ module: M, filter: FilterInfo?) {
+//        public init(_ module: M, filter: FilterInfo?) {
+//            self.module = module
+//            self.filterInfo = filter
+//        }
+
+        public init(_ module: M) {
             self.module = module
-            self.filterInfo = filter
         }
 
         open func column(_ index: Int32) throws -> DatabaseValue {

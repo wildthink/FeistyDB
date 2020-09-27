@@ -72,7 +72,7 @@ public final class SeriesModule: BaseTableModule {
     }
     
     public override func openCursor() -> VirtualTableCursor {
-        return Cursor(self, filter: filters.last)
+        return Cursor(self)
     }
 }
 
@@ -92,13 +92,13 @@ extension SeriesModule {
         var _max: Int64 = 0
         var _step: Int64 = 0
         
-        public override init(_ vtab: SeriesModule, filter: FilterInfo?)
+        public override init(_ vtab: SeriesModule)
         {
             self._min = 0
             self._max = vtab._max
             self._step = vtab.step
             self._value = _min
-            super.init(vtab, filter: filter)
+            super.init(vtab)
         }
 
         override func column(_ index: Int32) -> DatabaseValue {
@@ -123,9 +123,8 @@ extension SeriesModule {
 
         override func filter(_ arguments: [DatabaseValue], indexNumber: Int32, indexName: String?) {
             defer { module.clearFilters() }
-            guard let filterInfo = filterInfo ?? module.filters[Int(indexNumber)]
-            else { return }
-            
+            let filterInfo = module.filters[Int(indexNumber)]
+
             // DEBUG
 //            Report.print(
 //                filterInfo.describe(with: Column.allCases.map {String(describing:$0)},
