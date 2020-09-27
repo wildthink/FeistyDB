@@ -12,10 +12,12 @@ import FeistyDB
 final public class CalendarModule: BaseTableModule {
     
     public enum Column: Int32, ColumnIndex {
-        case date, weekday, day, week, month, year, start, stop, step
+        case date, weekday, day, week, month, year,
+             julianDay, julianDate,
+             start, stop, step
     }
     public override var declaration: String {
-        "CREATE TABLE x(date, weekday, day, week, month, year, start HIDDEN, stop HIDDEN, step HIDDEN)"
+        "CREATE TABLE x(date, weekday, day, week, month, year, julianDay, julianDate, start HIDDEN, stop HIDDEN, step HIDDEN)"
     }
 
     var date_fmt: DateFormatter = DateFormatter()
@@ -142,12 +144,15 @@ extension CalendarModule {
                 case .week:     return dbvalue(date, .weekOfYear)
                 case .month:    return dbvalue(date, .month)
                 case .year:     return dbvalue(date, .year)
-                    
+
+                case .julianDay:    return .integer(Int64(date.julianDay))
+                case .julianDate:   return .float(date.julianDate)
+
                 //  HIDDEN
                 case .start:    return .text(date_fmt.string(from: _min))
                 case .stop:     return .text(date_fmt.string(from: _max))
                 case .step:     return .text(step.name)
-             }
+            }
         }
         
         override func next() {

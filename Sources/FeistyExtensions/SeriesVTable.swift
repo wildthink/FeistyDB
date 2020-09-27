@@ -94,7 +94,7 @@ extension SeriesModule {
         
         public override init(_ vtab: SeriesModule, filter: FilterInfo?)
         {
-            self._min = vtab._min
+            self._min = 0
             self._max = vtab._max
             self._step = vtab.step
             self._value = _min

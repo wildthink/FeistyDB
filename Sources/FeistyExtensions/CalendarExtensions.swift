@@ -7,6 +7,24 @@
 
 import Foundation
 
+public extension Date {
+    
+    init (julianDate: Double) {
+        let JD_JAN_1_1970_0000GMT = 2440587.5
+        self = Date(timeIntervalSince1970: (julianDate - JD_JAN_1_1970_0000GMT) * 86400)
+    }
+    
+    var julianDate: Double {
+        let JD_JAN_1_1970_0000GMT = 2440587.5
+        return JD_JAN_1_1970_0000GMT + timeIntervalSince1970 / 86400
+    }
+    
+    var julianDay: Int {
+        let JD_JAN_1_1970_0000GMT = 2440587.5
+        return Int (JD_JAN_1_1970_0000GMT + timeIntervalSince1970 / 86400)
+    }
+}
+
 // https://www.datetimeformatter.com/how-to-format-date-time-in-swift/
 // https://schiavo.me/2019/formatting-dates/
 
