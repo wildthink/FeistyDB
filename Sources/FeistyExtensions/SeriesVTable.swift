@@ -18,7 +18,7 @@ public final class SeriesModule: BaseTableModule {
         "CREATE TABLE x(value,start hidden,stop hidden,step hidden)"
     }
     
-    var _min: Int64 = .min
+    var _min: Int64 = 0
     var _max: Int64 = .max
     var step: Int64 = 1
     
@@ -94,7 +94,7 @@ extension SeriesModule {
         
         public override init(_ vtab: SeriesModule)
         {
-            self._min = 0
+            self._min = vtab._min
             self._max = vtab._max
             self._step = vtab.step
             self._value = _min
