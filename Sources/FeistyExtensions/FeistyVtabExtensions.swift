@@ -26,6 +26,19 @@ public extension ColumnIndex {
     }
 }
 
+// Extenstion to interface w/ SeriesModule
+
+public func == <C: ColumnIndex>(lhs: FilterArg, rhs: C) -> Bool {
+    lhs.col_ndx == rhs.rawValue
+}
+
+extension FilterInfo {
+    func contains<C: ColumnIndex>(_ col: C) -> Bool {
+        argv.contains(where: { $0.col_ndx == col.rawValue} )
+    }
+}
+
+
 open class BaseTableModule: VirtualTableModule {
     
     public enum Column: Int32, ColumnIndex {

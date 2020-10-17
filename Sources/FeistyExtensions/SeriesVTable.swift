@@ -15,7 +15,7 @@ public final class SeriesModule: BaseTableModule {
     }
 
     public override var declaration: String {
-        "CREATE TABLE x(value,start hidden,stop hidden,step hidden)"
+        "CREATE TABLE series (value,start hidden,stop hidden,step hidden)"
     }
     
     var _min: Int64 = 0
@@ -23,31 +23,21 @@ public final class SeriesModule: BaseTableModule {
     var step: Int64 = 1
     
     required init(database: Database, arguments: [String], create: Bool) throws {
-//        report (#function, arguments)
         try super.init(database: database, arguments: arguments, create: create)
         // args 0..2 -> module_name, db_name, table_name
         postInit(argv: Array(arguments.dropFirst(3)))
     }
     
     required public init(database: Database, arguments: [String]) throws {
-//        report (#function, arguments)
         try super.init(database: database, arguments: arguments, create: false)
         // args 0..2 -> module_name, db_name, table_name
         postInit(argv: Array(arguments.dropFirst(3)))
     }
     
     func postInit(argv: [String]) {
-
-        if let val = argv[safe: 0] {
-            _min = Int64(val) ?? 0
-        }
-        if let val = argv[safe: 1] {
-            _max = Int64(val) ?? .max
-        }
-        if let val = argv[safe: 2] {
-            step = Int64(val) ?? 1
-        }
-//        report (#function, "min:", self._min, "max:", self._max, "step:", self.step)
+        _min = argv[safe: 0]?.int64Value ?? 0
+        _max = argv[safe: 1]?.int64Value ?? .max
+        step = argv[safe: 2]?.int64Value ?? 1
     }
 
     public override func bestIndex(_ indexInfo: inout sqlite3_index_info) -> VirtualTableModuleBestIndexResult {
@@ -61,7 +51,7 @@ public final class SeriesModule: BaseTableModule {
             indexInfo.estimatedRows = Int64.max // 2147483647
         }
         
-        if let arg = info.argv.first(where: { $0.col_ndx == Column.value.rawValue } ),
+        if let arg = info.argv.first(where: { $0 == Column.value } ),
            arg.op_str == "=" {
             indexInfo.estimatedRows = 1
             indexInfo.idxFlags = SQLITE_INDEX_SCAN_UNIQUE
@@ -73,13 +63,6 @@ public final class SeriesModule: BaseTableModule {
     
     public override func openCursor() -> VirtualTableCursor {
         return Cursor(self)
-    }
-}
-
-// Extenstion to interface w/ SeriesModule
-extension FilterInfo {
-    func contains(_ col: SeriesModule.Column) -> Bool {
-        argv.contains(where: { $0.col_ndx == col.rawValue} )
     }
 }
 

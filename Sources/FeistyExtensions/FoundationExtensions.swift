@@ -34,9 +34,16 @@ public extension Collection {
     subscript (safe index: Index) -> Element? {
         return indices.contains(index) ? self[index] : nil
     }
-    subscript (safe index: Index, else value: Element) -> Element {
+    subscript (at index: Index, else value: Element) -> Element {
         return indices.contains(index) ? self[index] : value
     }
+}
+
+public extension String {
+    var int16Value:  Int16?  { Int16(self) }
+    var int32Value:  Int32?  { Int32(self) }
+    var int64Value:  Int64?  { Int64(self) }
+    var doubleValue: Double? { Double(self) }
 }
 
 // MARK: report logging

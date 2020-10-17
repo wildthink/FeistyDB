@@ -13,21 +13,23 @@ final public class CalendarModule: BaseTableModule {
         
     public enum Column: Int32, ColumnIndex {
         case date, weekday, day, week, month, year,
-             julianDay, julianDate,
-             start, stop, step
+             julianDay, julianDate, print,
+             start, stop, step,
+             format
         
         var filterOption: FilterInfo.Option {
             switch self {
                 case .date, .year: return .ok
                 case .start, .stop: return .ok
                 case .step: return .eq_only
+                case .format: return .eq_only
                 default:
                     return .exclude
             }
         }
     }
     public override var declaration: String {
-        "CREATE TABLE x(date, weekday, day, week, month, year, julianDay, julianDate, start HIDDEN, stop HIDDEN, step HIDDEN)"
+        "CREATE TABLE x(date, weekday, day, week, month, year, julianDay, julianDate, print, start HIDDEN, stop HIDDEN, step HIDDEN, format HIDDEN)"
     }
 
     var date_fmt: DateFormatter = DateFormatter()
@@ -52,6 +54,7 @@ final public class CalendarModule: BaseTableModule {
     
     func postInit(argv: [String]) {
         date_fmt.dateFormat = "yyyy-MM-dd"
+
         if let val = argv[safe: 0] {
             _min = date_fmt.date(from: val) ?? .distantPast
         }
@@ -82,7 +85,7 @@ final public class CalendarModule: BaseTableModule {
             indexInfo.estimatedRows = 2147483647
         }
         
-        if let arg = info.argv.first(where: { $0.col_ndx == Column.date.rawValue } ),
+        if let arg = info.argv.first(where: { $0 == Column.date } ),
            arg.op_str == "=" {
             indexInfo.estimatedRows = 1
             indexInfo.idxFlags = SQLITE_INDEX_SCAN_UNIQUE
@@ -98,13 +101,6 @@ final public class CalendarModule: BaseTableModule {
     }
 }
 
-// Extenstion to interface w/ SeriesModule
-extension FilterInfo {
-    func contains(_ col: CalendarModule.Column) -> Bool {
-        argv.contains(where: { $0.col_ndx == col.rawValue} )
-    }
-}
-
 extension CalendarModule {
     final class Cursor: BaseTableModule.Cursor<CalendarModule> {
         
@@ -114,7 +110,8 @@ extension CalendarModule {
         var current: Date?
         var step: Calendar.Frequency = .daily
         var date_fmt: DateFormatter { module.date_fmt }
-        
+        var print_fmt: DateFormatter
+
         public override init(_ vtab: CalendarModule)
         {
             self.calendar = vtab.calendar
@@ -122,6 +119,7 @@ extension CalendarModule {
             self._max = vtab._max
             self.step = vtab.step
             self.current = _min
+            self.print_fmt = vtab.date_fmt.copy() as! DateFormatter
             super.init(vtab)
         }
 
@@ -142,10 +140,13 @@ extension CalendarModule {
                 case .julianDay:    return .integer(Int64(date.julianDay))
                 case .julianDate:   return .float(date.julianDate)
 
+                case .print:   return .text(print_fmt.string(from: date))
+
                 //  HIDDEN
                 case .start:    return .text(date_fmt.string(from: _min))
                 case .stop:     return .text(date_fmt.string(from: _max))
                 case .step:     return .text(step.name)
+                case .format:   return .text(print_fmt.dateFormat)
             }
         }
         
@@ -204,6 +205,9 @@ extension CalendarModule {
                     case (.date,  let .text(argv)):
                         guard let date = date_fmt.date(from: argv)  else { continue }
                         (_min, _max) = cmpBounds(farg.op_str, date, in: (_min, _max))
+
+                    case (.format,  let .text(argv)):
+                        print_fmt.dateFormat = argv
 
                     default:
                         break
