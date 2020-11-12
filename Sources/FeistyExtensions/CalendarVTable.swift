@@ -77,6 +77,10 @@ final public class CalendarModule: BaseTableModule {
         })
         else { return .constraint }
         
+        if let _ = info.argv.first(where: { !$0.usable }) {
+            return .constraint
+        }
+        
         if info.contains(Column.start) && info.contains(Column.stop) {
             indexInfo.estimatedCost = 2  - (info.contains(Column.step) ? 1 : 0)
             indexInfo.estimatedRows = 1000

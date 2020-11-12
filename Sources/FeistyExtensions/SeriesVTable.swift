@@ -12,15 +12,24 @@ public final class SeriesModule: BaseTableModule {
 
     public enum Column: Int32, ColumnIndex, CaseIterable {
         case value, start, stop, step
+        var filterOption: FilterInfo.Option {
+            switch self {
+                case .start, .stop: return .ok
+                case .step: return .eq_only
+                default:
+                    return .ok
+            }
+        }
+
     }
+
+    var _min: Int64 = 0
+    var _max: Int64 = .max
+    var step: Int64 = 1
 
     public override var declaration: String {
         "CREATE TABLE series (value,start hidden,stop hidden,step hidden)"
     }
-    
-    var _min: Int64 = 0
-    var _max: Int64 = .max
-    var step: Int64 = 1
     
     required init(database: Database, arguments: [String], create: Bool) throws {
         try super.init(database: database, arguments: arguments, create: create)
@@ -39,6 +48,10 @@ public final class SeriesModule: BaseTableModule {
         _max = argv[safe: 1]?.int64Value ?? .max
         step = argv[safe: 2]?.int64Value ?? 1
     }
+    
+    public override func openCursor() -> VirtualTableCursor {
+        return Cursor(self)
+    }
 
     public override func bestIndex(_ indexInfo: inout sqlite3_index_info) -> VirtualTableModuleBestIndexResult {
         
@@ -51,6 +64,10 @@ public final class SeriesModule: BaseTableModule {
             indexInfo.estimatedRows = Int64.max // 2147483647
         }
         
+        if let _ = info.argv.first(where: { !$0.usable }) {
+            return .constraint
+        }
+
         if let arg = info.argv.first(where: { $0 == Column.value } ),
            arg.op_str == "=" {
             indexInfo.estimatedRows = 1
@@ -59,10 +76,6 @@ public final class SeriesModule: BaseTableModule {
 
         indexInfo.idxNum = add(info)
         return .ok
-    }
-    
-    public override func openCursor() -> VirtualTableCursor {
-        return Cursor(self)
     }
 }
 
@@ -112,7 +125,36 @@ extension SeriesModule {
 //            Report.print(
 //                filterInfo.describe(with: Column.allCases.map {String(describing:$0)},
 //                                           values: arguments))
-            
+       
+            for farg in filterInfo.argv {
+                let col = Column(rawValue: farg.col_ndx)
+                guard let arg = arguments[Int(farg.arg_ndx)].int64Value else { continue }
+                
+                switch (col, farg.op_str) {
+                    case (.start, "="),
+                         (.start, ">="),
+                         (.start, ">"):
+                        _min  = arg
+                    case (.stop, "="),
+                         (.stop, "<="),
+                         (.stop, "<"):
+                        _max  = arg
+                    case (.step, "="):
+                        _step = arg
+                        
+                    case (.value, "="):
+                        (_min, _max) = (arg, arg)
+                    case (.value, ">="), (.value, ">"):
+                        (_min, _max) = (arg, _max)
+                    case (.value, "<="), (.value, "<"):
+                        (_min, _max) = (_min, arg)
+
+                    default:
+                        break
+                }
+            }
+
+            /*
             for farg in filterInfo.argv.reversed() {
                 switch (Column(rawValue: farg.col_ndx), arguments[Int(farg.arg_ndx)]) {
                     case (.start, let DatabaseValue.integer(arg)): _min  = arg
@@ -126,6 +168,7 @@ extension SeriesModule {
                         break
                 }
             }
+            */
             
             if arguments.contains(where: { return $0 == .null ? true : false }) {
                 _min = 1

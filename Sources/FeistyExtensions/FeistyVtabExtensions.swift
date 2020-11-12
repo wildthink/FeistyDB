@@ -171,7 +171,7 @@ public extension FilterInfo {
         for i in 0 ..< constraintCount {
             let constraint = constraints[i]
             
-            let farg = FilterArg(arg: argc - 1, col: constraint.iColumn, op: constraint.op)
+            let farg = FilterArg(arg: argc - 1, col: constraint.iColumn, op: constraint.op, usable: (constraint.usable != 0))
 
             switch check(farg) {
                 case .required:
@@ -214,15 +214,17 @@ public struct FilterArg: CustomStringConvertible, Equatable {
     public let arg_ndx: Int32
     public let col_ndx: Int32
     public let op: UInt8
+    public let usable: Bool
     
-    public init(arg: Int32, col: Int32, op: UInt8) {
+    public init(arg: Int32, col: Int32, op: UInt8, usable: Bool) {
         self.arg_ndx = arg
         self.col_ndx = col
         self.op = op
+        self.usable = usable
     }
     
-    init<C: ColumnIndex>(arg: Int32, col: C, op: UInt8) {
-        self.init(arg: arg, col: col.rawValue, op: op)
+    init<C: ColumnIndex>(arg: Int32, col: C, op: UInt8, usable: UInt8) {
+        self.init(arg: arg, col: col.rawValue, op: op, usable: usable != 0)
     }
 
     public var description: String  { "col[\(col_ndx)] \(op_str) argv[\(arg_ndx)])" }
