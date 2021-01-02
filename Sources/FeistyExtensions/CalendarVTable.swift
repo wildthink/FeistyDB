@@ -20,7 +20,7 @@ final public class CalendarModule: BaseTableModule {
         var filterOption: FilterInfo.Option {
             switch self {
                 case .date, .year: return .ok
-                case .start, .stop: return .ok
+                case .start, .stop: return .hidden
                 case .step: return .eq_only
                 case .format: return .eq_only
                 default:
@@ -29,7 +29,7 @@ final public class CalendarModule: BaseTableModule {
         }
     }
     public override var declaration: String {
-        "CREATE TABLE x(date, weekday, day, week, month, year, julianDay, julianDate, print, start HIDDEN, stop HIDDEN, step HIDDEN, format HIDDEN)"
+        "CREATE TABLE x(date primary key, weekday, day, week, month, year, julianDay, julianDate, print, start HIDDEN, stop HIDDEN, step HIDDEN, format HIDDEN)"
     }
 
     var date_fmt: DateFormatter = DateFormatter()
@@ -69,15 +69,18 @@ final public class CalendarModule: BaseTableModule {
     
     public override func bestIndex(_ indexInfo: inout sqlite3_index_info) -> VirtualTableModuleBestIndexResult {
         
-        guard let info = FilterInfo(&indexInfo, check: { (farg) in
+        guard let info = FilterInfo(&indexInfo, check: { farg in
             // Maybe another option being .error or .reject?
             // when we encounter an unknow columen which should NEVER happen!!
             guard let col = Column(rawValue: farg.col_ndx) else { return .exclude }
             return col.filterOption
         })
-        else { return .constraint }
+        else {
+            return .constraint
+        }
         
-        if let _ = info.argv.first(where: { !$0.usable }) {
+        if let info = info.argv.first(where: { !$0.usable }) {
+            Report.print("bestIndex: REJECT", info.describe(with: Self.Column.allCases.map { $0.name }))
             return .constraint
         }
         
@@ -130,11 +133,19 @@ extension CalendarModule {
         override func column(_ index: Int32) -> DatabaseValue {
             // "CREATE TABLE x(date, weekday, day, week, month, year, start, stop, step)"
             func dbvalue(_ date: Date, _ comp: Calendar.Component) -> DatabaseValue {
-                .integer(Int64(calendar.component(comp, from: date)))
+                let v = calendar.component(comp, from: date)
+                Report.print(type(of: self), "^\(v)")
+                return .int(v)
+//                return .integer(Int64(v))
             }
-            guard let date = current, let col = Column(rawValue: index) else { return .null }
+            func dbvalue(_ str: String) -> DatabaseValue {
+                Report.print(type(of: self), "^\(str)")
+                return .text(str)
+            }
+           guard let date = current, let col = Column(rawValue: index) else { return .null }
             switch col {
-                case .date:     return .text(date_fmt.string(from: date))
+                case .date:     return dbvalue(date_fmt.string(from: date))
+                // .text(date_fmt.string(from: date))
                 case .weekday:  return dbvalue(date, .weekday)
                 case .day:      return dbvalue(date, .day)
                 case .week:     return dbvalue(date, .weekOfYear)
@@ -161,11 +172,13 @@ extension CalendarModule {
                 
         override func filter(_ arguments: [DatabaseValue], indexNumber: Int32, indexName: String?) {
             defer { module.clearFilters() }
-            let filterInfo = module.filters[Int(indexNumber)]
 //            guard let filterInfo = filterInfo ?? module.filters[Int(indexNumber)]
 //            else { return }
             _rowid = 1
-            
+            let ndx = Int(indexNumber)
+            guard module.filters.count > ndx else { return }
+            let filterInfo = module.filters[ndx]
+
             // DEBUG
             Report.print(#function, indexNumber, "\n", filterInfo.describe(with: Column.allCases.map {String(describing:$0)}, values: arguments))
             
@@ -234,3 +247,10 @@ extension CalendarModule {
         }
     }
 }
+
+extension DatabaseValue {
+    static func int(_ i: Int) -> DatabaseValue {
+        return .integer(Int64(i))
+    }
+}
+

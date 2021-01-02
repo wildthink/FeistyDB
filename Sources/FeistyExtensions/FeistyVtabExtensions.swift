@@ -153,7 +153,7 @@ public class FilterInfo: CustomStringConvertible {
 
 public extension FilterInfo {
     
-    enum Option { case ok, eq_only, required, exclude }
+    enum Option { case ok, eq_only, required, hidden, exclude }
     typealias ConstraintCheck = (FilterArg) -> Option
     
     convenience init? (_ indexInfo: inout sqlite3_index_info, check: ConstraintCheck? = nil) {
@@ -179,6 +179,8 @@ public extension FilterInfo {
                 case .exclude:
                     continue
                 case .ok:
+                    break
+                case .hidden:
                     break
                 case .eq_only:
                     if (1 != constraint.usable) && constraint.op != SQLITE_INDEX_CONSTRAINT_EQ {
@@ -235,7 +237,8 @@ public struct FilterArg: CustomStringConvertible, Equatable {
         let col = (ndx < cols.count ? cols[ndx] : "col[\(ndx)]")
         let a_ndx = Int(arg_ndx)
         let arg = (a_ndx < values.count ? values[a_ndx] : "argv[\(a_ndx)]")
-        return "\(col) \(op_str) \(arg)"
+        let use = usable ? "*" : ""
+        return "\(use)\(col) \(op_str) \(arg)"
     }
     
     public static func op_str(_ op: UInt8) -> String {

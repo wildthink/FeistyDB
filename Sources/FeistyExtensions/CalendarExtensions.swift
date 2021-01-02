@@ -23,6 +23,15 @@ public extension Date {
         let JD_JAN_1_1970_0000GMT = 2440587.5
         return Int (JD_JAN_1_1970_0000GMT + timeIntervalSince1970 / 86400)
     }
+    
+    var even_day: Bool {
+        return julianDay % 2 == 0
+    }
+    
+    var odd_day: Bool {
+        return julianDay % 2 != 0
+    }
+
 }
 
 // https://www.datetimeformatter.com/how-to-format-date-time-in-swift/
@@ -123,6 +132,64 @@ public struct Recur {
 
 public extension Recur {
     
+    /*
+        if r.date >= date then ^r.date
+        if r.year < d.year => ^nil
+
+        if r.year == 0
+        then n.year = d.year
+        else n.year = r.year // r.year > d.year
+
+        if r.month == 0
+        then r.month = d.year
+        else if r.month < d.month then ++n.year
+        else n.month = r.month // r.month > d.month
+     
+        if r.month < d.month =>
+        
+     */
+    func start(from date: Date, in cal: Calendar = Calendar.current) -> Date? {
+        let d = cal.dateComponents([.year, .month, .day, .weekday], from: date)
+        var n = DateComponents()
+        if year > 0, d.year! < year { return nil }
+        if year == 0 {
+            n.year = d.year
+        } else {
+            n.year = Int(year)
+        }
+        
+        if month == 0 {
+            n.month = d.month!
+        } else if month < d.month! {
+            n.year! += 1
+        } else {
+            n.month = Int(month)
+        }
+        
+        if day == 0 {
+            n.day = d.day!
+        } else if day < d.day! {
+            n.month! += 1
+        } else {
+            n.day = Int(day)
+        }
+
+        return n.date
+    }
+    
+    /**
+     If we have a starting/reference date for the bounding span we use it
+     to verify any stride > 1 if we have a day-of-week. Otherwise fall back
+     to the other match
+     */
+    func matches(_ date: Date, from ref: Date, in cal: Calendar = Calendar.current) -> Bool {
+        guard self.stride > 1, let rdate = start(from: ref, in: cal) else {
+            return matches(date, in: cal)
+        }
+        let delta = (date.julianDay - rdate.julianDay) % (Int(stride) * 7)
+        return (delta == 0)
+    }
+
     func matches(_ date: Date, in cal: Calendar? = nil) -> Bool {
         let cal = cal ?? Calendar.current // Calendar(identifier: .gregorian)
         let ymdw = cal.dateComponents([.year, .month, .day, .weekday],

@@ -56,13 +56,13 @@ public final class SeriesModule: BaseTableModule {
     public override func bestIndex(_ indexInfo: inout sqlite3_index_info) -> VirtualTableModuleBestIndexResult {
         
         guard let info = FilterInfo(&indexInfo) else { return .constraint }
-        if info.contains(Column.start) && info.contains(Column.stop) {
-            indexInfo.estimatedCost = 2  - (info.contains(Column.step) ? 1 : 0)
-            indexInfo.estimatedRows = 1000
-        }
-        else {
-            indexInfo.estimatedRows = Int64.max // 2147483647
-        }
+//        if info.contains(Column.start) && info.contains(Column.stop) {
+//            indexInfo.estimatedCost = 2  - (info.contains(Column.step) ? 1 : 0)
+//            indexInfo.estimatedRows = 1000
+//        }
+//        else {
+//            indexInfo.estimatedRows = Int64.max // 2147483647
+//        }
         
         if let _ = info.argv.first(where: { !$0.usable }) {
             return .constraint
