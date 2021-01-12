@@ -30,7 +30,7 @@ class FDVirtualTableTests: XCTestCase {
         let statement = try! db.prepare(sql: "SELECT name, login, home FROM user")
 
         guard let row = try! statement.firstRow() else { XCTFail(); return }
-        report (try! row.anyValues())
+//        report (try! row.anyValues())
         XCTAssertEqual(NSFullUserName(), row[0].stringValue)
         XCTAssertEqual(NSUserName(), row[1].stringValue)
         XCTAssertEqual(NSHomeDirectory(), row[2].stringValue)
@@ -231,7 +231,7 @@ final class SeriesModule: EponymousVirtualTableModule {
         for (ndx, col) in queryPlan.elements().enumerated() {
             constraintUsage[col.index - 1].argvIndex = Int32(ndx + 1)
         }
-        report (#line, queryPlan)
+//        report (#line, queryPlan)
         
         if queryPlan.contains(.start) && queryPlan.contains(.stop) {
             // Lower the cost if we also have step

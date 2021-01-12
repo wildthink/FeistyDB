@@ -921,7 +921,7 @@ class FeistyDBTests: XCTestCase {
 
 	#if SQLITE_ENABLE_PREUPDATE_HOOK
 
-	func testPreUpdateHook() {
+	func testPreUpdateHook() throws {
 		let db = try! Database()
 
 		try! db.execute(sql: "create table t1(a,b);")
