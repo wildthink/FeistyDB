@@ -1,0 +1,4 @@
+module CSQLite [system] {
+	header "../CSQLite/include/feisty_db_sqlite3_glue.h"
+	export *
+}
